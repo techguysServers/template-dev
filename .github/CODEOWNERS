@@ -1,0 +1,14 @@
+# CODEOWNERS — auto-requested as reviewer on any PR touching the matched paths.
+
+# Global fallback
+* @Miche1-Pierre
+
+# Design system & Shadcn components
+landing-page/components/ui/ @Miche1-Pierre
+landing-page/app/globals.css @Miche1-Pierre
+
+# CI / GitHub config
+.github/ @Miche1-Pierre
+
+# Scripts
+scripts/ @Miche1-Pierre

@@ -1,0 +1,59 @@
+---
+description: Architecture rules — React component-first, mirror pattern
+globs: landing-page/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Architecture
+
+## Folder structure
+
+```yml
+landing-page/
+  app/
+    (routes)/
+      page-name/
+        page.tsx          ← thin: imports the page component, no logic
+  components/
+    ui/                   ← Shadcn primitives only, never modified directly
+    page-name/            ← mirrors app/(routes)/page-name/
+      PageNameHero.tsx
+      PageNameFeatures.tsx
+    shared/               ← reused across multiple pages like Footer, Navbar, ...
+```
+
+**Rule:** every `app/**/page.tsx` must have a matching folder under `components/`.
+The page file only wires layout + data; all UI lives in components.
+
+## Component rules
+
+- Functional components only, no class components
+- One component per file, named export preferred
+- Props typed with `interface` (not inline), suffix `Props`
+- Use Shadcn primitives before building custom ones
+- Use `cn()` from `@/lib/utils` for class merging — never string concat
+- Extract custom hooks to `hooks/` when logic exceeds ~15 lines
+
+```tsx
+// ✅
+interface HeroProps {
+  title: string
+  cta: string
+}
+export function Hero({ title, cta }: HeroProps) { … }
+
+// ❌
+export default function ({ title, cta }: { title: string; cta: string }) { … }
+```
+
+## CSS / Design tokens
+
+- All colors, spacing, radii → CSS variables in `app/globals.css`
+- Never hardcode hex or pixel values in components
+- Dark mode via `next-themes`, toggle via `ThemeProvider`
+
+## TypeScript
+
+- `strict: true` always
+- No `any` — use `unknown` + type guard if needed
+- Prefer `const` assertions and `satisfies` over type casting

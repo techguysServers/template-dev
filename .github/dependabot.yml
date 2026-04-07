@@ -1,0 +1,51 @@
+version: 2
+
+updates:
+  # npm deps for the landing-page project
+  - package-ecosystem: npm
+    directory: /landing-page
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Europe/Paris
+    open-pull-requests-limit: 5
+    target-branch: dev
+    labels:
+      - "scope:deps"
+      - "type:chore"
+    groups:
+      shadcn-ui:
+        patterns:
+          - "shadcn"
+          - "radix-ui"
+          - "@radix-ui/*"
+          - "class-variance-authority"
+          - "tailwind-merge"
+      next-react:
+        patterns:
+          - "next"
+          - "react"
+          - "react-dom"
+      tailwind:
+        patterns:
+          - "tailwindcss"
+          - "@tailwindcss/*"
+          - "postcss"
+          - "prettier-plugin-tailwindcss"
+      types:
+        patterns:
+          - "@types/*"
+
+  # GitHub Actions
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Europe/Paris
+    target-branch: dev
+    labels:
+      - "scope:ci"
+      - "type:chore"

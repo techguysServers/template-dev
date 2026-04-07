@@ -1,0 +1,80 @@
+name: Release
+
+on:
+  push:
+    branches: [main, dev]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    name: Bump version & tag
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: landing-page
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: landing-page/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # On dev branch → pre-release version x.y.z-rcN
+      - name: Bump pre-release (dev → rc)
+        if: github.ref == 'refs/heads/dev'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          CURRENT=$(node -p "require('./package.json').version")
+          # Strip any existing -rcN suffix
+          BASE=$(echo "$CURRENT" | sed 's/-rc[0-9]*//')
+          # Find next rc number
+          LAST_RC=$(git tag -l "v${BASE}-rc*" | sort -V | tail -1)
+          if [ -z "$LAST_RC" ]; then
+            N=1
+          else
+            N=$(echo "$LAST_RC" | grep -oP '(?<=rc)\d+')
+            N=$((N + 1))
+          fi
+          NEW_VERSION="${BASE}-rc${N}"
+          npm version "$NEW_VERSION" --no-git-tag-version
+          git add package.json package-lock.json
+          git commit -m "chore(release): v${NEW_VERSION} [skip ci]"
+          git tag "v${NEW_VERSION}"
+          git push --follow-tags
+
+      # On main branch → stable release, strip -rcN
+      - name: Bump stable release (main)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          CURRENT=$(node -p "require('./package.json').version")
+          # Strip -rcN to get stable version
+          STABLE=$(echo "$CURRENT" | sed 's/-rc[0-9]*//')
+          npm version "$STABLE" --no-git-tag-version --allow-same-version
+          git add package.json package-lock.json
+          git commit -m "chore(release): v${STABLE} [skip ci]" || echo "Nothing to commit"
+          git tag "v${STABLE}" || echo "Tag already exists"
+          git push --follow-tags || echo "Nothing to push"
+
+      - name: Create GitHub Release
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.STABLE_VERSION }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

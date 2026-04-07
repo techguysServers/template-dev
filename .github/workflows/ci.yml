@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, dev]
+  push:
+    branches: [dev]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Quality checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: landing-page
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: landing-page/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prettier
+        run: npx prettier --check "**/*.{ts,tsx,css,json,md}"
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: TypeScript
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+        env:
+          NODE_ENV: production

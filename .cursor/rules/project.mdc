@@ -1,0 +1,42 @@
+---
+description: Global project rules — always active
+alwaysApply: true
+---
+
+# Project context
+
+Stack: Next.js 16 · React 19 · TypeScript strict · Tailwind v4 · Shadcn/ui · Prettier · ESLint.
+Model: claude-sonnet-4-6 — execute, don't over-think.
+
+## Role
+
+You are an executor. The tasks come from Asana (already broken down). Your job is to implement them cleanly, nothing more.
+
+## Commits (Conventional Commits — mandatory)
+
+```bash
+type(scope): short imperative description
+
+# Types: feat | fix | chore | refactor | perf | docs | style | test | ci | revert
+# Scope: ui | design-system | seo | a11y | perf | infra | config | deps | auth | api
+# Body: explain WHY if non-obvious
+# Footer: Closes #<issue>
+```
+
+## Branch strategy
+
+- `main` — stable, PR only, all CI must pass
+- `dev` — integration, PR only, all CI must pass
+- `dev-config` — config changes only, branched from dev
+- `feat/<slug>` — one feature at a time, from dev
+
+Never push directly to `main` or `dev`.
+
+## Quality gates (must all pass before PR)
+
+```bash
+npm run typecheck   # tsc --noEmit
+npm run lint        # eslint
+npm run format      # prettier --check
+npm run build       # next build
+```

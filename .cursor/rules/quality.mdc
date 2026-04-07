@@ -1,0 +1,44 @@
+---
+description: Code quality — a11y, SEO, performance, best practices
+globs: landing-page/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Quality standards
+
+## Accessibility (WCAG 2.1 AA)
+
+- Interactive elements must have accessible labels (`aria-label`, `aria-labelledby`, or visible text)
+- Images must have meaningful `alt` text (empty `alt=""` for decorative images)
+- Keyboard navigation must work: focus rings must be visible
+- Color contrast ratio ≥ 4.5:1 for text
+- Use semantic HTML (`<button>`, `<nav>`, `<main>`, `<section>`, `<article>`)
+
+```tsx
+// ❌
+<div onClick={handleClick}>Click me</div>
+
+// ✅
+<button onClick={handleClick}>Click me</button>
+```
+
+## SEO
+
+- Every page exports `metadata` or `generateMetadata`
+- `<title>` and `<meta name="description">` always set
+- Use Next.js `<Image>` component — never raw `<img>` for content images
+- Heading hierarchy: one `<h1>` per page, then `<h2>` → `<h3>`
+
+## Performance
+
+- `"use client"` only when strictly needed (event handlers, hooks, browser APIs)
+- Default to Server Components
+- Dynamic imports for heavy components: `next/dynamic`
+- No inline functions in JSX render for expensive computations → `useMemo` / `useCallback`
+
+## Code hygiene
+
+- No `console.log` in committed code
+- No commented-out code blocks
+- No `TODO` without a linked GitHub issue number
+- Remove unused imports and variables before committing

@@ -1,0 +1,18 @@
+{
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "typescript.preferences.importModuleSpecifier": "non-relative",
+  "typescript.tsdk": "landing-page/node_modules/typescript/lib",
+  "eslint.workingDirectories": [{ "directory": "landing-page", "changeProcessCWD": true }],
+  "prettier.configPath": "landing-page/.prettierrc",
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/.next": true
+  },
+  "github.copilot.chat.codeGeneration.instructions": [
+    { "file": ".github/copilot-instructions.md" }
+  ]
+}

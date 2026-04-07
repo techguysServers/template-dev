@@ -1,0 +1,65 @@
+name: Asana sync
+
+on:
+  # Asana → GitHub : toutes les 30 min
+  schedule:
+    - cron: "*/30 * * * *"
+
+  # GitHub → Asana : events PR et issues
+  pull_request:
+    types: [opened, reopened, closed, review_requested]
+  pull_request_review:
+    types: [submitted]
+  issues:
+    types: [reopened]
+
+  # Déclenchement manuel
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  # ── Asana → GitHub ──────────────────────────────────────────────────────────
+  asana-to-github:
+    name: Asana → GitHub
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install asana @octokit/rest
+      - run: node .github/scripts/asana-sync.js
+        env:
+          ASANA_PAT: ${{ secrets.ASANA_PAT }}
+          ASANA_PROJECT_GID: ${{ secrets.ASANA_PROJECT_GID }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPO: ${{ github.repository }}
+
+  # ── GitHub → Asana ──────────────────────────────────────────────────────────
+  github-to-asana:
+    name: GitHub → Asana
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'pull_request' ||
+      github.event_name == 'pull_request_review' ||
+      github.event_name == 'issues'
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install asana @octokit/rest
+      - run: node .github/scripts/github-to-asana.js
+        env:
+          ASANA_PAT: ${{ secrets.ASANA_PAT }}
+          ASANA_PROJECT_GID: ${{ secrets.ASANA_PROJECT_GID }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPO: ${{ github.repository }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
