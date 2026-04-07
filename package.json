@@ -1,0 +1,14 @@
+{
+  "name": "template-dev",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "setup": "node scripts/setup.js",
+    "asana-sync": "node .github/scripts/asana-sync.js"
+  },
+  "dependencies": {
+    "@octokit/rest": "^21.0.2",
+    "asana": "^3.0.12"
+  }
+}
