@@ -3,7 +3,7 @@ name: Asana sync
 on:
   # Asana → GitHub : toutes les 30 min
   schedule:
-    - cron: "*/30 * * * *"
+    - cron: "0 8 * * *"
 
   # GitHub → Asana : events PR et issues
   pull_request:
