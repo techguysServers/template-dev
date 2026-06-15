@@ -1,0 +1,85 @@
+name: Deploy
+
+# Template de déploiement. DÉCOMMENTE le bloc correspondant à ta cible.
+#   dev  → staging (auto)
+#   main → production (auto, ou protégé par "environments" + approbation)
+#
+# Configure les "Environments" GitHub (Settings → Environments) :
+#   · staging     : secrets de staging
+#   · production  : secrets de prod + required reviewers (approbation manuelle)
+#
+# ⚠️ Vérifie la dernière version des actions sur leurs repos officiels.
+
+on:
+  push:
+    branches: [main, dev]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # ── Option A — Cloudflare Workers / Pages ─────────────────────────────
+      # - name: Deploy to Cloudflare
+      #   uses: cloudflare/wrangler-action@v3
+      #   with:
+      #     apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      #     accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      #     command: deploy
+
+      # ── Option B — Railway ────────────────────────────────────────────────
+      # - name: Deploy to Railway
+      #   run: |
+      #     npm i -g @railway/cli
+      #     railway up --service ${{ vars.RAILWAY_SERVICE }}
+      #   env:
+      #     RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      # ── Option C — Render (deploy hook) ───────────────────────────────────
+      # - name: Trigger Render deploy
+      #   run: curl -fsS "${{ secrets.RENDER_DEPLOY_HOOK }}"
+
+      # ── Option D — Vercel ─────────────────────────────────────────────────
+      # Vercel se branche en général via son intégration GitHub native
+      # (preview par PR + prod sur main). CLI seulement si besoin de contrôle :
+      # - name: Deploy to Vercel
+      #   run: |
+      #     npm i -g vercel
+      #     vercel deploy --prod --token ${{ secrets.VERCEL_TOKEN }} --yes
+
+      # ── Option E — Image Docker → GHCR ────────────────────────────────────
+      # - name: Log in to GHCR
+      #   uses: docker/login-action@v3
+      #   with:
+      #     registry: ghcr.io
+      #     username: ${{ github.actor }}
+      #     password: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Build & push
+      #   uses: docker/build-push-action@v6
+      #   with:
+      #     context: .
+      #     file: docker/Dockerfile.node
+      #     push: true
+      #     tags: ghcr.io/${{ github.repository }}:${{ github.sha }}
+
+      - name: Placeholder
+        run: echo "Décommente le bloc de déploiement correspondant à ta cible."

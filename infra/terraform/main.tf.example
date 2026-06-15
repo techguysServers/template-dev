@@ -1,0 +1,52 @@
+# Infrastructure as Code — squelette Terraform (exemple).
+#
+# Copie en `main.tf` et adapte au provider. L'IaC sert quand l'infra dépasse
+# ce qu'une plateforme PaaS gère seule (Cloudflare, AWS, GCP, Azure…).
+# Pour Vercel/Railway/Render simples, la config se fait souvent dans leur UI —
+# l'IaC devient utile à partir de plusieurs environnements / ressources.
+#
+# ⚠️ Vérifie les dernières versions des providers sur registry.terraform.io.
+
+terraform {
+  required_version = ">= 1.9"
+
+  required_providers {
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 4.0"
+    }
+    # aws = { source = "hashicorp/aws", version = "~> 5.0" }
+  }
+
+  # Backend distant recommandé (state partagé, lock). Exemples :
+  # backend "s3"  { ... }        # AWS S3 + DynamoDB lock
+  # backend "remote" { ... }     # Terraform Cloud / HCP
+}
+
+# ── Variables ────────────────────────────────────────────────────────────────
+variable "environment" {
+  description = "Environnement cible (staging | production)"
+  type        = string
+}
+
+variable "cloudflare_account_id" {
+  type      = string
+  sensitive = true
+}
+
+# ── Provider ─────────────────────────────────────────────────────────────────
+provider "cloudflare" {
+  # api_token via env : CLOUDFLARE_API_TOKEN (ne jamais hardcoder un secret)
+}
+
+# ── Exemple de ressource : un Worker Cloudflare ───────────────────────────────
+# resource "cloudflare_workers_script" "api" {
+#   account_id = var.cloudflare_account_id
+#   name       = "api-${var.environment}"
+#   content    = file("${path.module}/../../backend/dist/index.js")
+# }
+
+# ── Outputs ──────────────────────────────────────────────────────────────────
+# output "api_url" {
+#   value = cloudflare_workers_script.api.name
+# }

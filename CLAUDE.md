@@ -81,15 +81,19 @@ Règles transverses, quel que soit le langage :
 | Migrations | **Drizzle Kit** | — |
 | Cache | **Upstash Redis** | — |
 | Files/Storage | **Supabase Storage** | Cloudflare R2 si hors Supabase |
+| Vectoriel / RAG | **pgvector** (dans Postgres) | Qdrant/Pinecone à grande échelle |
 
-### Déploiement
+### Conteneurisation & déploiement
 
-| Contexte | Plateforme |
-|---|---|
-| Next.js landing / app | Vercel |
-| Hono API (edge) | Cloudflare Workers |
-| Backend Node.js containérisé | Railway |
-| Static site | Cloudflare Pages |
+- **Docker** : templates dans `docker/` (`Dockerfile.node`, `.nextjs`, `.python`, `docker-compose.yml` avec Postgres+pgvector, Redis, Keycloak, Mailpit). Multi-stage, non-root, digests épinglés en prod.
+- **Plateformes** : Vercel (front) · Cloudflare Workers (API edge) · Railway/Render/Fly (containers) · AWS/GCP/Azure + Terraform (entreprise).
+- **Promotion** : `feat/*` → preview · `dev` → staging · `main` → production (approbation manuelle).
+- Détail complet → `STACK.md` et `.cursor/rules/infra.mdc`.
+
+### CI/CD (GitHub Actions)
+
+- `ci.yml` (quality gate) · `security.yml` (gitleaks, CodeQL, Trivy, dependency-review) · `release.yml` (versioning) · `deploy.yml` (par environnement).
+- Secrets via GitHub Secrets/Environments — jamais en clair. Production protégée par required reviewers.
 
 ### Auth
 
@@ -97,7 +101,9 @@ Règles transverses, quel que soit le langage :
 |---|---|
 | Nouveau projet (défaut) | **Clerk** |
 | Projet déjà sur Supabase | Supabase Auth |
-| Self-hosted, flexible | NextAuth/Auth.js |
+| SSO entreprise / self-hosted | **Keycloak** (OIDC/SAML, realms, LDAP/AD) |
+| Managed entreprise | Auth0 / WorkOS |
+| Self-hosted léger | NextAuth/Auth.js |
 
 ### Observabilité
 

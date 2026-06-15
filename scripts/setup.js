@@ -328,6 +328,7 @@ Qu'est-ce que tu construis ?
   2. Frontend app    (Next.js, Nuxt, Angular, SvelteKit, Remix, Vite…)
   3. Backend API     (Node, Python, Java, .NET, Go…)
   4. Full-stack      (frontend + backend)
+  5. DevOps / Infra  (Docker, compose, CI/CD, déploiement)
 `)
   const choice = (await ask("Choix : ")).trim()
   switch (choice) {
@@ -338,8 +339,72 @@ Qu'est-ce que tu construis ?
       await pickAndScaffold("Frontend app", FRONTEND_STACKS)
       await pickAndScaffold("Backend API", BACKEND_STACKS)
       break
+    case "5": await setupInfra(); break
     default: err("Choix invalide.")
   }
+}
+
+// ── DevOps / Infra ───────────────────────────────────────────────────────────
+
+async function setupInfra() {
+  banner("DevOps / Infra")
+
+  const hasDocker = run("docker --version") !== null
+  const hasCompose = run("docker compose version") !== null
+
+  console.log(`
+Ce template fournit déjà (présents dans le repo) :
+  · docker/Dockerfile.node | .nextjs | .python   (multi-stage, non-root)
+  · docker/docker-compose.yml                     (Postgres+pgvector, Redis, Keycloak, Mailpit)
+  · .github/workflows/security.yml                (gitleaks, CodeQL, Trivy, dependency-review)
+  · .github/workflows/deploy.yml                  (templates Cloudflare/Railway/Render/Vercel/Docker)
+  · infra/terraform/main.tf.example               (squelette IaC)
+
+Docs : docker/README.md · STACK.md · .cursor/rules/infra.mdc
+`)
+
+  console.log("Que veux-tu faire ?")
+  console.log("  1. Démarrer la stack de dev locale (docker compose up -d)")
+  console.log("  2. Voir les cibles de déploiement")
+  console.log("  3. Rien, juste l'info ci-dessus")
+
+  const c = (await ask("\nChoix : ")).trim()
+
+  if (c === "1") {
+    if (!hasDocker || !hasCompose) {
+      warn("Docker / Docker Compose non détecté.")
+      info("Installe Docker Desktop : https://www.docker.com/products/docker-desktop/")
+      return
+    }
+    if (!existsSync(".env") && existsSync(".env.example")) {
+      info("Crée d'abord .env depuis .env.example (cp .env.example .env), puis relance.")
+    }
+    try {
+      runOrFail("docker compose -f docker/docker-compose.yml up -d")
+      success("Stack démarrée.")
+      info("Postgres :5432 · Redis :6379 · Keycloak http://localhost:8080 · Mailpit http://localhost:8025")
+    } catch (e) {
+      err(`Échec : ${e.message}`)
+    }
+    return
+  }
+
+  if (c === "2") {
+    console.log(`
+Cibles de déploiement (voir STACK.md → Déploiement) :
+  · Vercel               — front Next.js (intégration GitHub native, preview par PR)
+  · Cloudflare Workers   — API edge (Hono)        → wrangler deploy
+  · Railway / Render     — containers Node/Python/Java/.NET
+  · Fly.io               — apps multi-régions
+  · AWS/GCP/Azure        — entreprise, via Terraform (infra/terraform/)
+
+Active le bloc correspondant dans .github/workflows/deploy.yml
+et configure les Environments GitHub (staging / production).
+`)
+    return
+  }
+
+  info("OK — tout est déjà dans le repo.")
 }
 
 async function offerCommit(dir, label) {

@@ -49,3 +49,16 @@ updates:
     labels:
       - "scope:ci"
       - "type:chore"
+
+  # Docker base images
+  - package-ecosystem: docker
+    directory: /docker
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Europe/Paris
+    target-branch: dev
+    labels:
+      - "scope:infra"
+      - "type:chore"

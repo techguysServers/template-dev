@@ -29,7 +29,15 @@ Default **Node.js + Hono**. Also by language: Node (Fastify/NestJS) · Python (F
 Validation mandatory everywhere: Zod / Pydantic / Bean Validation / DataAnnotations.
 
 ### Database
-Supabase (Postgres) · Drizzle ORM (Node) / SQLModel (Python) / JPA (Java) / EF Core (.NET) · Upstash Redis
+Supabase (Postgres) · Drizzle ORM (Node) / SQLModel (Python) / JPA (Java) / EF Core (.NET) · Upstash Redis · **pgvector** for AI/RAG
+
+### Infra / DevOps
+- **Docker**: templates in `docker/` (multi-stage, non-root, pinned digests in prod). `docker-compose.yml` = Postgres+pgvector, Redis, Keycloak, Mailpit.
+- **CI/CD**: GitHub Actions — `ci.yml`, `security.yml` (gitleaks/CodeQL/Trivy), `release.yml`, `deploy.yml`.
+- **Deploy**: Vercel (front) · Cloudflare Workers (edge) · Railway/Render/Fly (containers) · AWS/GCP/Azure + Terraform (enterprise).
+- **Auth (self-hosted/SSO)**: Keycloak (OIDC/SAML, realms).
+- **Secrets**: GitHub Secrets/Environments, Doppler/Infisical, Vault. Never commit secrets.
+- See `.cursor/rules/infra.mdc`.
 
 Full decision tree + official doc links → `STACK.md`
 

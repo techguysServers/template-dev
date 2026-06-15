@@ -1,0 +1,37 @@
+# syntax=docker/dockerfile:1
+# Générique Node.js (Hono / Fastify / NestJS).
+# Multi-stage, non-root, image finale slim.
+#
+# ⚠️ Vérifie la dernière LTS Node sur https://hub.docker.com/_/node
+#    et épingle un digest en prod (FROM node:22-slim@sha256:...).
+
+# ── deps ────────────────────────────────────────────────────────────────────
+FROM node:22-slim AS deps
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN --mount=type=cache,target=/root/.npm npm ci
+
+# ── build ───────────────────────────────────────────────────────────────────
+FROM node:22-slim AS build
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN npm run build && npm prune --production
+
+# ── runtime ─────────────────────────────────────────────────────────────────
+FROM node:22-slim AS runtime
+ENV NODE_ENV=production
+WORKDIR /app
+
+# Utilisateur non-root (sécurité)
+RUN useradd --system --uid 1001 --gid 0 appuser
+COPY --from=build --chown=appuser:0 /app/node_modules ./node_modules
+COPY --from=build --chown=appuser:0 /app/dist ./dist
+COPY --from=build --chown=appuser:0 /app/package.json ./package.json
+
+USER appuser
+EXPOSE 3000
+# Healthcheck — adapte l'endpoint à ton API
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s \
+  CMD node -e "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+CMD ["node", "dist/index.js"]

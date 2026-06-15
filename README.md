@@ -33,12 +33,14 @@ template-dev/
 ├── landing-page/           ← Next.js 16 + Tailwind v4 + shadcn/ui (ready)
 ├── frontend/               ← Frontend app (scaffold via wizard)
 ├── backend/                ← Backend API (scaffold via wizard)
+├── docker/                 ← Dockerfiles + docker-compose (Postgres+pgvector, Redis, Keycloak, Mailpit)
+├── infra/                  ← Infrastructure as Code (Terraform skeleton)
 ├── scripts/
-│   └── setup.js            ← Wizard interactif (scaffold + GitHub + Asana)
-├── .cursor/rules/          ← Règles Cursor AI (architecture, qualité, sécurité…)
+│   └── setup.js            ← Wizard interactif (scaffold + Docker + GitHub + Asana)
+├── .cursor/rules/          ← Règles Cursor AI (architecture, qualité, sécurité, infra…)
 ├── .github/
-│   ├── copilot-instructions.md  ← GitHub Copilot
-│   └── workflows/          ← CI/CD + Asana sync
+│   ├── copilot-instructions.md  ← GitHub Copilot / Windsurf / Zed
+│   └── workflows/          ← CI · security (CodeQL/Trivy/gitleaks) · release · deploy · Asana sync
 ├── CLAUDE.md               ← Instructions Claude Code
 ├── STACK.md                ← Décisions technologiques par domaine
 └── TEMPLATE_SOP.md         ← Procédure complète (workflow, PR, commits…)

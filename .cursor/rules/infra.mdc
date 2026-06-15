@@ -1,0 +1,90 @@
+---
+description: Infra & DevOps — Docker, CI/CD, deployment, IaC, secrets, environments
+globs: "{docker/**,infra/**,.github/workflows/**,**/Dockerfile*,**/*.tf,**/wrangler.toml,**/railway.json,**/render.yaml}"
+alwaysApply: false
+---
+
+# Infra & DevOps
+
+> Toujours la dernière version stable. Épingle les digests d'images en prod.
+> En cas de doute sur une commande/version → doc officielle.
+
+## Docker
+
+Templates dans `docker/` : `Dockerfile.node`, `Dockerfile.nextjs`, `Dockerfile.python`, `docker-compose.yml`.
+
+Règles non-négociables :
+- **Multi-stage** (deps → build → runtime) — image finale minimale
+- **Non-root** en runtime — créer un user dédié, jamais `root`
+- **Pas de secret dans l'image** — tout via env / secrets au runtime
+- **Tags épinglés** en prod (`@sha256:...`), jamais `:latest`
+- **Healthcheck** défini, endpoint `/health`
+- `.dockerignore` pour exclure `node_modules`, `.env`, `.git`
+
+```dockerfile
+# ✅ non-root + multi-stage
+FROM node:22-slim AS runtime
+RUN useradd --system --uid 1001 appuser
+USER appuser
+
+# ❌ root + image lourde + secret
+FROM node:latest
+ENV API_KEY=sk-hardcoded   # JAMAIS
+```
+
+## docker-compose (dev local)
+
+Services backing standard : Postgres+pgvector, Redis, Keycloak, Mailpit.
+`docker compose -f docker/docker-compose.yml up -d`
+
+## CI/CD — GitHub Actions
+
+Workflows dans `.github/workflows/` :
+- `ci.yml` — typecheck, lint, format, build (gate `quality` requis pour merger)
+- `security.yml` — gitleaks, CodeQL, Trivy, dependency-review
+- `release.yml` — versioning sémantique auto
+- `deploy.yml` — déploiement par environnement (staging/prod)
+
+Règles :
+- Tout merge sur `main`/`dev` passe la CI à 100%
+- `concurrency` pour annuler les runs obsolètes
+- `permissions` minimales par workflow (principe du moindre privilège)
+- Secrets via GitHub Secrets / Environments — jamais en clair dans le YAML
+- Production = GitHub Environment avec **required reviewers** (approbation manuelle)
+
+## Déploiement — choix de plateforme
+
+| Cible | Outil | Quand |
+|---|---|---|
+| Next.js / front | **Vercel** | Défaut front (preview par PR) |
+| API edge (Hono) | **Cloudflare Workers** | `wrangler deploy` |
+| Container (Node/Python/Java) | **Railway** / **Render** / Fly.io | Long-running, deps système |
+| Entreprise / multi-région | AWS / GCP / Azure + IaC | Contraintes infra fortes |
+
+Promotion : `feat/*` → preview · `dev` → staging · `main` → production.
+
+## Secrets management
+
+| Contexte | Outil |
+|---|---|
+| CI/CD | GitHub Secrets + Environments |
+| Runtime PaaS | Variables d'env de la plateforme (Vercel/Railway/CF) |
+| Multi-env / équipe | Doppler ou Infisical |
+| Entreprise / rotation | HashiCorp Vault |
+
+Jamais de secret commité. `.env.local` ignoré par git. `.env.example` documente les clés (valeurs vides).
+
+## IaC (Infrastructure as Code)
+
+- Squelette dans `infra/terraform/`. Utiliser dès qu'il y a plusieurs environnements
+  ou des ressources cloud à versionner.
+- State distant + lock (S3+DynamoDB, ou Terraform Cloud) — jamais de state local en équipe.
+- Alternatives : Pulumi (TypeScript), SST (AWS + TS).
+- Secrets via env/variables sensibles — jamais hardcodés dans les `.tf`.
+
+## Observabilité en prod
+
+- **Sentry** (erreurs) + **Axiom** ou OpenTelemetry → Grafana/Datadog (traces/metrics/logs)
+- Health endpoints (`/health`, `/ready`) pour les orchestrateurs
+- `requestId` propagé bout-en-bout, logs structurés JSON
+- Uptime monitoring (Checkly / BetterStack) après lancement

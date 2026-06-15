@@ -153,6 +153,18 @@ Toutes ces options sont valides. **Par défaut : Next.js** (écosystème, RSC, d
 | Storage | **Supabase Storage** | Cloudflare R2 | Hors écosystème Supabase |
 | Search | **Postgres full-text** | Typesense | Recherche très avancée |
 | Realtime | **Supabase Realtime** | Pusher | Hors écosystème Supabase |
+| Vectoriel / RAG | **pgvector** (dans Postgres) | Pinecone, Qdrant | Volume très élevé / besoin dédié |
+
+### Vectoriel & IA (pgvector)
+
+Pour l'IA (RAG, recherche sémantique, embeddings), **reste dans Postgres avec `pgvector`** par défaut — pas de DB vectorielle séparée tant que ce n'est pas nécessaire. Image Docker `pgvector/pgvector` ou extension Supabase (`create extension vector`).
+
+```sql
+CREATE EXTENSION IF NOT EXISTS vector;
+-- embedding vector(1536) + index HNSW (cosine) — voir docker/README.md
+```
+
+Bascule vers **Qdrant** / **Pinecone** seulement à grande échelle (millions de vecteurs, filtrage avancé, multi-tenant lourd).
 
 ---
 
@@ -162,20 +174,84 @@ Toutes ces options sont valides. **Par défaut : Next.js** (écosystème, RSC, d
 |---|---|---|
 | Nouveau projet (défaut) | **Clerk** | Sessions, MFA, OAuth, UI pré-built, edge-compatible |
 | Déjà sur Supabase | Supabase Auth | Évite la double dépendance auth |
-| Self-hosted, flexible | NextAuth/Auth.js | Contrôle total, DB custom |
+| **Self-hosted / SSO entreprise** | **Keycloak** | OIDC/SAML, realms, fédération LDAP/AD, open-source |
+| Managed entreprise | Auth0 / WorkOS | SSO B2B, SCIM, sans héberger |
+| Self-hosted léger, flexible | NextAuth/Auth.js | Contrôle total, DB custom |
 | Pas d'UI, API only | Clerk Backend SDK | Vérification JWT sans UI |
+
+### Keycloak (auth self-hosted / entreprise)
+
+Quand le client exige du **SSO d'entreprise** (OIDC/SAML), de la fédération d'identité (LDAP/Active Directory), des **realms** multi-tenants, ou veut éviter un SaaS d'auth externe. Inclus dans `docker/docker-compose.yml` pour le dev local (http://localhost:8080). En prod : conteneur dédié + Postgres + reverse proxy TLS. Vérifie la dernière version sur https://www.keycloak.org.
 
 ---
 
 ## Déploiement
 
-| Contexte | Plateforme | Raison |
+**Par défaut : Vercel (front) + Cloudflare Workers (API edge).** Le choix dépend du runtime, des contraintes et du budget. Tableau comparatif :
+
+| Plateforme | Idéal pour | Modèle | Notes |
+|---|---|---|---|
+| **Vercel** | Next.js, fronts | Serverless | Preview par PR, DX top, défaut front |
+| **Cloudflare** (Workers/Pages/Containers) | API edge, static, edge compute | Edge / serverless | Global, gratuit généreux, `wrangler deploy` |
+| **Railway** | Containers Node/Python/Java | Container PaaS | Pas de cold start, DB managées, simple |
+| **Render** | Containers, cron, workers | Container PaaS | Alternative Railway, blueprints YAML |
+| **Fly.io** | Apps multi-régions, Go/Rust | Container (machines) | Proche utilisateur, volumes |
+| **AWS / GCP / Azure** | Entreprise, contraintes fortes | IaaS/PaaS | Via IaC (Terraform), plus complexe |
+
+Stratégie de promotion : `feat/*` → **preview** · `dev` → **staging** · `main` → **production** (avec approbation manuelle via GitHub Environment).
+
+---
+
+## Conteneurisation — Docker
+
+Templates prêts dans `docker/` (voir `docker/README.md`).
+
+| Élément | Fichier | Usage |
 |---|---|---|
-| Next.js (défaut) | **Vercel** | Optimisé Next.js, previews PR |
-| Hono API (edge) | **Cloudflare Workers** | Edge global, gratuit généreux |
-| Backend Node.js | **Railway** | Containers, pas de cold start |
-| Static site | **Cloudflare Pages** | CDN global, gratuit |
-| Backend Python/autre | **Render** | Alternative Railway |
+| API Node | `Dockerfile.node` | Hono / Fastify / NestJS |
+| Next.js | `Dockerfile.nextjs` | App Next.js standalone |
+| Python | `Dockerfile.python` | FastAPI / Django (via uv) |
+| Stack dev | `docker-compose.yml` | Postgres+pgvector, Redis, Keycloak, Mailpit |
+
+Règles : multi-stage, **non-root**, image slim, healthcheck, digests épinglés en prod, jamais de secret dans l'image. Détail → `.cursor/rules/infra.mdc`.
+
+---
+
+## CI/CD — GitHub Actions
+
+| Workflow | Rôle |
+|---|---|
+| `ci.yml` | typecheck · lint · format · build (gate `quality` requis) |
+| `security.yml` | gitleaks · CodeQL (SAST) · Trivy · dependency-review |
+| `release.yml` | versioning sémantique automatique (rc sur dev, stable sur main) |
+| `deploy.yml` | déploiement par environnement (Cloudflare/Railway/Render/Vercel/Docker) |
+
+Principes : permissions minimales par job, `concurrency` pour annuler les runs obsolètes, secrets via GitHub Secrets/Environments, production protégée par required reviewers.
+
+---
+
+## Secrets & configuration
+
+| Contexte | Outil |
+|---|---|
+| CI/CD | GitHub Secrets + Environments |
+| Runtime PaaS | Variables d'env de la plateforme (Vercel/Railway/CF) |
+| Multi-env / équipe | **Doppler** ou **Infisical** |
+| Entreprise / rotation / audit | **HashiCorp Vault** |
+
+`.env.local` ignoré par git · `.env.example` documente les clés (valeurs vides) · jamais de secret commité (vérifié par gitleaks en CI).
+
+---
+
+## Infrastructure as Code (IaC)
+
+| Outil | Quand |
+|---|---|
+| **Terraform** (défaut) | Multi-cloud, ressources versionnées, standard de l'industrie |
+| Pulumi | Préférence TypeScript/Python plutôt que HCL |
+| SST | Full AWS + TypeScript, apps serverless |
+
+Squelette dans `infra/terraform/`. Utiliser dès qu'il y a plusieurs environnements ou des ressources cloud à versionner. State distant + lock obligatoire en équipe. Pour Vercel/Railway/Render simples, la config plateforme suffit souvent.
 
 ---
 
@@ -185,8 +261,12 @@ Toutes ces options sont valides. **Par défaut : Next.js** (écosystème, RSC, d
 |---|---|---|
 | **Sentry** | Erreurs JS, traces back/front | Dès le MVP |
 | **Axiom** | Logs structurés (serverless-friendly) | Dès que backend en prod |
+| **OpenTelemetry** | Traces/metrics/logs standardisés | App distribuée, multi-service |
+| **Grafana / Prometheus** | Dashboards, metrics, alertes | Self-hosted / entreprise |
 | **PostHog** | Funnel, événements, feature flags | Dès que users en prod |
-| **Checkly** | Uptime + E2E synthétique | Après lancement |
+| **BetterStack / Checkly** | Uptime + E2E synthétique | Après lancement |
+
+> Pour une app multi-service, instrumente avec **OpenTelemetry** (standard vendor-neutral) et exporte vers Sentry/Axiom/Grafana/Datadog selon le contexte. Expose `/health` et `/ready` pour les orchestrateurs (Docker, K8s, Railway).
 
 ### Conventions de logging
 
@@ -215,6 +295,13 @@ console.log("token:", token)                 // donnée sensible
 | CORS | Whitelist explicite | APIs publiques |
 | SQL injection | Drizzle paramétré | — |
 | XSS | CSP headers + DOMPurify | HTML dynamique |
+| Secret scanning | **gitleaks** (CI) | Tout le repo |
+| SAST | **CodeQL** (CI) | Code applicatif |
+| Vulns deps/images | **Trivy** + Dependabot | Deps + images Docker |
+
+### Sécurité supply-chain (CI)
+
+Le workflow `.github/workflows/security.yml` exécute en continu : **gitleaks** (secrets), **CodeQL** (analyse statique), **Trivy** (vulnérabilités deps + filesystem), **dependency-review** (deps ajoutées dans la PR). Dependabot (`.github/dependabot.yml`) ouvre les PR de mise à jour. Une faille HIGH/CRITICAL casse la CI.
 
 ### Headers de sécurité minimum (next.config)
 
