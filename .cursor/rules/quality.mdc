@@ -1,6 +1,6 @@
 ---
-description: Code quality — a11y, SEO, performance, best practices
-globs: landing-page/**/*.{ts,tsx}
+description: Code quality — a11y, SEO, performance, best practices (all domains)
+globs: "{landing-page,frontend,backend}/**/*.{ts,tsx}"
 alwaysApply: false
 ---
 
@@ -42,3 +42,33 @@ alwaysApply: false
 - No commented-out code blocks
 - No `TODO` without a linked GitHub issue number
 - Remove unused imports and variables before committing
+
+## API / Backend quality
+
+- Validate every input with Zod — body, params, query strings
+- Return consistent error shapes: `{ error: { code, message } }`
+- Use HTTP status codes correctly (200/201/400/401/403/404/422/500)
+- No business logic in route handlers — extract to service functions
+- No secrets or PII in logs
+
+```ts
+// ✅ Consistent error response
+return c.json({ error: { code: "VALIDATION_ERROR", message: err.message } }, 422)
+
+// ❌ Inconsistent
+return c.json({ msg: "bad input" }, 400)
+```
+
+## Database
+
+- Always use parameterized queries — never string concatenation in SQL
+- Migrations versioned in `drizzle/migrations/` — never edit past migrations
+- No raw SQL unless Drizzle can't express it; comment why
+- Transactions for multi-step writes
+
+## Testing
+
+- Unit tests for all pure functions and utils
+- Integration tests for all API routes (real DB, not mocked)
+- E2E tests only for critical user journeys (login, signup, checkout)
+- No `test.only` or `test.skip` in committed code

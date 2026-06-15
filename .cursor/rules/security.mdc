@@ -1,0 +1,140 @@
+---
+description: Security and observability — Arcjet, Zod, Sentry, Axiom, logging
+globs: "{landing-page,frontend,backend}/**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Security
+
+## Baseline — mandatory on every project in production
+
+| Measure | Tool | Where |
+|---|---|---|
+| Input validation | Zod | All API inputs |
+| Rate limiting | Arcjet | Public-facing routes |
+| HTTP headers | Helmet.js | Node.js servers |
+| Bot protection | Arcjet | Auth routes, forms |
+| CORS | Hono cors / Next.js config | APIs |
+| Secrets | `.env.local` / Vercel Env | Never in code |
+
+## Security headers (Next.js)
+
+Add to `next.config.mjs`:
+
+```js
+const securityHeaders = [
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "origin-when-cross-origin" },
+  { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+]
+```
+
+## Input validation — never trust user input
+
+```ts
+// ✅ Every API input validated with Zod
+const schema = z.object({
+  email: z.string().email().max(255),
+  password: z.string().min(8).max(128),
+})
+const body = schema.parse(req.body)
+
+// ❌ Unvalidated input used directly
+const user = await db.find({ email: req.body.email })
+```
+
+## OWASP Top 10 checklist
+
+- **A01 Broken Access Control** — check authorization on every request, not just authentication
+- **A02 Cryptographic Failures** — HTTPS only, no secrets in logs, bcrypt for passwords
+- **A03 Injection** — Drizzle parameterized queries, Zod validation
+- **A05 Security Misconfiguration** — security headers, disable debug in prod
+- **A07 Auth Failures** — Clerk handles this; verify JWTs server-side, short expiry
+- **A09 Logging Failures** — log security events, never log tokens/passwords
+
+## Environment variables
+
+```
+# ✅ In .env.local (never committed)
+DATABASE_URL=postgres://...
+CLERK_SECRET_KEY=sk_live_...
+ARCJET_KEY=ajkey_...
+
+# ❌ Never
+const SECRET = "hardcoded-secret"
+```
+
+---
+
+# Observability
+
+## Error tracking — Sentry
+
+Initialize in `instrumentation.ts` (Next.js) or `src/index.ts` (Hono):
+
+```ts
+import * as Sentry from "@sentry/nextjs"
+
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  environment: process.env.NODE_ENV,
+  tracesSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 1.0,
+})
+```
+
+Capture in catch blocks:
+```ts
+try {
+  await riskyOperation()
+} catch (err) {
+  Sentry.captureException(err, { extra: { requestId, userId } })
+  throw err
+}
+```
+
+## Structured logging — Axiom
+
+```ts
+import { Axiom } from "@axiomhq/js"
+const axiom = new Axiom({ token: process.env.AXIOM_TOKEN! })
+
+// Log shape: always include requestId for tracing
+function logger(level: "info" | "warn" | "error", data: Record<string, unknown>, msg: string) {
+  axiom.ingest("app-logs", [{ level, message: msg, timestamp: new Date().toISOString(), ...data }])
+}
+
+// Usage
+logger("info", { requestId, userId, action: "user.login" }, "User logged in")
+logger("error", { requestId, error: err.message }, "Database query failed")
+```
+
+**Never log:**
+- Passwords, tokens, API keys
+- Full credit card numbers
+- PII beyond what's necessary (use userId, not full email)
+
+## Request ID tracing
+
+Add a `requestId` to every incoming request and propagate it through all log lines and Sentry context.
+
+```ts
+app.use("*", async (c, next) => {
+  const requestId = crypto.randomUUID()
+  c.set("requestId", requestId)
+  c.header("X-Request-Id", requestId)
+  await next()
+})
+```
+
+## Log levels
+
+| Level | When |
+|---|---|
+| `debug` | Dev only — detailed diagnostics |
+| `info` | Normal operations (request in, user action) |
+| `warn` | Unexpected but handled (retry, fallback used) |
+| `error` | Unhandled exception, data loss risk |
+
+Never use `debug` logs in production builds.

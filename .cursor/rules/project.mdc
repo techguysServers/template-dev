@@ -1,16 +1,23 @@
 ---
-description: Global project rules — always active
+description: Global project rules — always active for all domains
 alwaysApply: true
 ---
 
 # Project context
 
-Stack: Next.js 16 · React 19 · TypeScript strict · Tailwind v4 · Shadcn/ui · Prettier · ESLint.
-Model: claude-sonnet-4-6 — execute, don't over-think.
+TechGuys multi-domain template. Stack varies by domain — see STACK.md for decisions.
+Model: claude-sonnet-4-6 — execute, don't over-engineer.
 
 ## Role
 
-You are an executor. The tasks come from Asana (already broken down). Your job is to implement them cleanly, nothing more.
+You are an executor. Tasks come from Asana via GitHub Issues, already broken down.
+Implement cleanly. Nothing beyond what the task requires.
+
+## Domains
+
+- `landing-page/` — Next.js 16 + React 19 + Tailwind v4 + shadcn/ui
+- `frontend/` — Next.js 15 App Router (scaffold via setup.js)
+- `backend/` — Hono + Zod + Arcjet (scaffold via setup.js)
 
 ## Commits (Conventional Commits — mandatory)
 
@@ -18,7 +25,7 @@ You are an executor. The tasks come from Asana (already broken down). Your job i
 type(scope): short imperative description
 
 # Types: feat | fix | chore | refactor | perf | docs | style | test | ci | revert
-# Scope: ui | design-system | seo | a11y | perf | infra | config | deps | auth | api
+# Scopes: ui | api | db | auth | config | deps | infra | seo | a11y | perf | security
 # Body: explain WHY if non-obvious
 # Footer: Closes #<issue>
 ```
@@ -26,17 +33,27 @@ type(scope): short imperative description
 ## Branch strategy
 
 - `main` — stable, PR only, all CI must pass
-- `dev` — integration, PR only, all CI must pass
-- `dev-config` — config changes only, branched from dev
-- `feat/<slug>` — one feature at a time, from dev
+- `dev` — integration, PR only from feat/*
+- `dev-config` — config/CI changes only, from dev
+- `feat/<slug>` — one feature = one branch = one issue
 
 Never push directly to `main` or `dev`.
 
 ## Quality gates (must all pass before PR)
 
 ```bash
-npm run typecheck   # tsc --noEmit
-npm run lint        # eslint
-npm run format      # prettier --check
-npm run build       # next build
+# Frontend / Landing
+npm run typecheck && npm run lint && npm run format && npm run build
+
+# Backend
+npm run typecheck && npm run lint && npm run test && npm run build
 ```
+
+## Do not
+
+- Push directly to `main` or `dev`
+- Leave `console.log` in committed code
+- Use `any` in TypeScript — use `unknown` + type guard
+- Hardcode hex colors or pixel values — use CSS variables
+- Add features not in the task
+- Comment the WHAT — only the non-obvious WHY

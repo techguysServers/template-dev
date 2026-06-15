@@ -1,0 +1,136 @@
+---
+description: Backend API rules — Hono, Zod, auth, rate limiting
+globs: "backend/**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Backend
+
+## Framework: Hono
+
+Entry point: `backend/src/index.ts`
+
+```ts
+import { Hono } from "hono"
+import { logger } from "hono/logger"
+import { cors } from "hono/cors"
+import { authMiddleware } from "./middleware/auth"
+import { rateLimitMiddleware } from "./middleware/rateLimit"
+import usersRoute from "./routes/v1/users"
+
+const app = new Hono()
+
+app.use("*", logger())
+app.use("*", cors({ origin: process.env.ALLOWED_ORIGINS?.split(",") ?? [] }))
+app.use("/api/*", rateLimitMiddleware)
+
+app.route("/api/v1/users", usersRoute)
+
+export default app
+```
+
+## Validation — Zod mandatory on all inputs
+
+```ts
+import { z } from "zod"
+
+const CreateUserSchema = z.object({
+  email: z.string().email(),
+  name: z.string().min(2).max(100),
+})
+
+app.post("/users", async (c) => {
+  const result = CreateUserSchema.safeParse(await c.req.json())
+  if (!result.success) {
+    return c.json({ error: { code: "VALIDATION_ERROR", message: result.error.message } }, 422)
+  }
+  // proceed with result.data — fully typed
+})
+```
+
+## Auth — Clerk JWT verification
+
+```ts
+import { createClerkClient } from "@clerk/backend"
+
+const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY })
+
+export async function authMiddleware(c: Context, next: Next) {
+  const token = c.req.header("Authorization")?.replace("Bearer ", "")
+  if (!token) return c.json({ error: { code: "UNAUTHORIZED", message: "No token" } }, 401)
+
+  try {
+    const payload = await clerk.verifyToken(token)
+    c.set("userId", payload.sub)
+    await next()
+  } catch {
+    return c.json({ error: { code: "UNAUTHORIZED", message: "Invalid token" } }, 401)
+  }
+}
+```
+
+## Rate limiting — Arcjet
+
+```ts
+import arcjet, { fixedWindow } from "@arcjet/node"
+
+const aj = arcjet({
+  key: process.env.ARCJET_KEY!,
+  rules: [fixedWindow({ mode: "LIVE", window: "1m", max: 60 })],
+})
+
+export async function rateLimitMiddleware(c: Context, next: Next) {
+  const decision = await aj.protect(c.req.raw)
+  if (decision.isDenied()) {
+    return c.json({ error: { code: "RATE_LIMITED", message: "Too many requests" } }, 429)
+  }
+  await next()
+}
+```
+
+## Error response shape
+
+Always return:
+```json
+{ "error": { "code": "ERROR_CODE", "message": "Human readable message" } }
+{ "data": { ... } }
+```
+
+Never mix shapes. Never expose stack traces in production.
+
+## HTTP status codes
+
+| Code | When |
+|---|---|
+| 200 | GET / PUT success |
+| 201 | POST created |
+| 204 | DELETE success (no body) |
+| 400 | Bad request (malformed) |
+| 401 | Not authenticated |
+| 403 | Authenticated but not authorized |
+| 404 | Resource not found |
+| 422 | Validation error (valid JSON, invalid data) |
+| 429 | Rate limited |
+| 500 | Unexpected server error |
+
+## Service layer
+
+Route handlers must be thin. Business logic goes in service functions.
+
+```ts
+// ✅
+app.post("/users", authMiddleware, async (c) => {
+  const body = CreateUserSchema.parse(await c.req.json())
+  const user = await userService.create(body)
+  return c.json({ data: user }, 201)
+})
+
+// ❌ Logic in handler
+app.post("/users", authMiddleware, async (c) => {
+  const body = await c.req.json()
+  const existing = await db.select().from(users).where(eq(users.email, body.email))
+  if (existing.length > 0) return c.json({ error: "exists" }, 400)
+  const hashed = await bcrypt.hash(body.password, 10)
+  // ... 50 more lines
+})
+```

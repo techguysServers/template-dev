@@ -1,55 +1,129 @@
-# Copilot instructions
+# GitHub Copilot instructions — TechGuys Dev Template
 
 Model target: claude-sonnet-4-6 (or equivalent). Execute, don't over-engineer.
 
-## Stack
+---
 
-Next.js 16 · React 19 · TypeScript strict · Tailwind CSS v4 · Shadcn/ui · Prettier · ESLint
+## Stack by domain
+
+### Landing page
+Next.js 16 · React 19 · TypeScript strict · Tailwind CSS v4 · shadcn/ui · Prettier · ESLint
+
+### Frontend app
+Next.js 15 App Router · Zustand · TanStack Query · Clerk · shadcn/ui · Tailwind v4
+
+### Backend API
+Hono · Zod · Arcjet · Drizzle ORM · Cloudflare Workers (or Node.js/Railway)
+
+### Database
+Supabase (Postgres) · Drizzle ORM · Upstash Redis
+
+Full decision tree → `STACK.md`
+
+---
 
 ## Architecture
 
-- Component-first. Every `app/**/page.tsx` is a thin shell; all UI is in `components/<page-name>/`.
-- `components/ui/` = Shadcn primitives — never modified directly.
-- `components/shared/` = cross-page reusables.
-- `hooks/` = custom hooks when logic > ~15 lines.
-- Server Components by default. `"use client"` only when strictly needed.
+### Landing page — component-first
+
+- `app/**/page.tsx` = thin shell, no JSX logic
+- All UI in `components/<page-name>/`
+- `components/ui/` = Shadcn — never modify directly
+- `components/shared/` = Navbar, Footer, cross-page
+- `hooks/` = extracted when logic > ~15 lines
+
+### Frontend app — feature-first
+
+- `components/features/<feature>/` = co-located components, hooks, types
+- `lib/db/` = Drizzle client + schema
+- `lib/auth/` = Clerk helpers
+- Server Components by default, `"use client"` only when needed
+
+### Backend — Hono, route-first
+
+- `src/routes/v1/` = one file per resource
+- `src/middleware/` = auth, rateLimit, logger
+- `src/lib/db.ts` = Drizzle client
+- Validate every input with Zod before any processing
+- Return `{ data }` or `{ error: { code, message } }` — always consistent
+
+---
 
 ## TypeScript
 
-- `strict: true`. No `any`. Props as named `interface`s with `Props` suffix.
-- Use `cn()` from `@/lib/utils` for class merging.
+- `strict: true` always
+- No `any` — use `unknown` + type guard
+- Props as `interface NomProps` (suffix `Props`)
+- Named exports everywhere except Next.js page/layout files
+- `cn()` from `@/lib/utils` for Tailwind class merging
 
-## Styling
+---
 
-- All design tokens in `app/globals.css` CSS variables. Never hardcode hex/px.
-- Dark mode via `next-themes` + `ThemeProvider`.
+## Security baseline
 
-## Quality (must all pass)
+- Zod on all API inputs (body, params, query)
+- Arcjet for rate limiting on public routes
+- Auth middleware on all protected routes
+- JWT verified server-side, never trusted from client
+- No secrets in code — `.env.local` only
+- Security headers in `next.config.mjs`
+
+---
+
+## Observability
+
+- Sentry for errors (frontend + backend)
+- Axiom for structured logs
+- Always include `requestId` in log lines
+- Never log tokens, passwords, or PII
+
+---
+
+## Quality gates (must all pass before PR)
 
 ```bash
+# Frontend / Landing
 npm run typecheck && npm run lint && npm run format && npm run build
+
+# Backend
+npm run typecheck && npm run lint && npm run test && npm run build
 ```
+
+---
 
 ## Commits
 
 Conventional Commits: `type(scope): message`
-Types: feat | fix | chore | refactor | perf | docs | style | test | ci | revert
+
+Types: `feat` · `fix` · `chore` · `refactor` · `perf` · `docs` · `style` · `test` · `ci` · `revert`
+Scopes: `ui` · `api` · `db` · `auth` · `config` · `deps` · `infra` · `seo` · `a11y` · `perf` · `security`
+
+---
 
 ## Git flow
 
 - `main` ← PR from dev (stable, CI required)
 - `dev` ← PR from feat/* branches
-- `feat/<slug>` ← one feature per branch
+- `feat/<slug>` ← one feature per branch = one issue
 - `dev-config` ← config-only changes, from dev
 
-## A11y & SEO
+---
 
-- WCAG 2.1 AA. Semantic HTML. Alt on images. One `<h1>` per page.
+## A11y & SEO (landing / frontend)
+
+- WCAG 2.1 AA. Semantic HTML. Alt on all images.
+- One `<h1>` per page, heading hierarchy respected.
 - Every page exports `metadata` or `generateMetadata`.
+
+---
 
 ## Do not
 
 - Push directly to `main` or `dev`
 - Leave `console.log` in committed code
-- Use inline styles or hardcoded colors
-- Create files that aren't required for the task
+- Use `any` in TypeScript
+- Use inline styles or hardcoded colors / hex values
+- Modify `components/ui/` (Shadcn primitives)
+- Create files not required by the task
+- Add error handling for scenarios that can't happen
+- Expose stack traces in API responses

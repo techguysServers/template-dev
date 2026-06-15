@@ -1,0 +1,107 @@
+---
+description: Database rules — Drizzle ORM, Supabase, migrations, queries
+globs: "{backend,frontend}/**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Database
+
+## Stack: Drizzle + Supabase (Postgres)
+
+Client setup in `src/lib/db.ts`:
+
+```ts
+import { drizzle } from "drizzle-orm/postgres-js"
+import postgres from "postgres"
+import * as schema from "./schema"
+
+const client = postgres(process.env.DATABASE_URL!)
+export const db = drizzle(client, { schema })
+```
+
+## Schema — Drizzle table definitions
+
+All tables in `src/lib/schema.ts` (or split by domain: `schema/users.ts`, `schema/posts.ts`).
+
+```ts
+import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core"
+
+export const users = pgTable("users", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  email: text("email").notNull().unique(),
+  name: text("name").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+})
+
+export type User = typeof users.$inferSelect
+export type NewUser = typeof users.$inferInsert
+```
+
+## Queries — always typed
+
+```ts
+// ✅ Select with type inference
+const user = await db.select().from(users).where(eq(users.id, id)).limit(1)
+// user: { id: string; email: string; name: string; ... }[]
+
+// ✅ Insert returning
+const [created] = await db.insert(users).values(newUser).returning()
+
+// ✅ Transaction
+await db.transaction(async (tx) => {
+  const [user] = await tx.insert(users).values(userData).returning()
+  await tx.insert(profiles).values({ userId: user.id, ...profileData })
+})
+
+// ❌ Never raw string SQL for user data
+db.execute(sql`SELECT * FROM users WHERE id = ${userId}`) // ok only for dynamic queries
+```
+
+## Migrations
+
+Generate: `npx drizzle-kit generate`
+Apply: `npx drizzle-kit migrate`
+
+Rules:
+- Never edit a migration file after it has been applied
+- One migration per feature branch
+- Migration names describe what they do: `0001_create_users.sql`
+- Always test rollback plan before merging
+
+## Supabase RLS (Row Level Security)
+
+If using Supabase directly from the frontend:
+- Enable RLS on every table
+- Never disable RLS unless the table is truly public
+- Policies live in `supabase/migrations/` as SQL
+
+```sql
+-- Users can only read their own rows
+CREATE POLICY "users_own_data" ON users
+  FOR ALL USING (auth.uid() = id);
+```
+
+## Query patterns
+
+```ts
+// Pagination
+const items = await db.select().from(posts)
+  .orderBy(desc(posts.createdAt))
+  .limit(20)
+  .offset((page - 1) * 20)
+
+// Relations with joins
+const postsWithAuthor = await db
+  .select({ post: posts, author: users })
+  .from(posts)
+  .leftJoin(users, eq(posts.authorId, users.id))
+  .where(eq(posts.published, true))
+```
+
+## Do not
+
+- No `SELECT *` in production queries — select only needed columns
+- No synchronous DB calls — always `await`
+- No connection pools larger than needed (Supabase pooler handles this)
+- No secrets in migration files
