@@ -14,6 +14,25 @@
 
 ---
 
+## ⚠️ Principe n°1 — toujours la dernière version stable
+
+**Ne te fie jamais à ta mémoire pour une version, une commande de scaffold ou une étape de setup.**
+Les versions changent constamment. Avant de scaffolder ou d'installer quoi que ce soit :
+
+1. **Utilise les commandes officielles `create` / `init` qui tirent toujours la dernière version**
+   (`npm create x@latest`, `npx create-x@latest`, `dotnet new`, `spring init`, etc.).
+2. **Si tu n'es pas certain de la commande ou de la version → va lire la doc officielle.**
+   Chaque section ci-dessous donne le lien officiel. C'est la source de vérité, pas ce fichier.
+3. **Ne jamais épingler une version périmée.** Vérifie la dernière version stable
+   (`npm view <pkg> version`, page releases GitHub, doc officielle) au moment du setup.
+4. Les numéros de version cités dans ce document sont **indicatifs au 2026-06-15** —
+   considère-les comme « la dernière stable de cette branche », pas comme une cible figée.
+
+> Règle d'or : *si je ne peux pas confirmer la dernière version / la bonne commande de tête,
+> je consulte la doc officielle avant d'agir.*
+
+---
+
 ## Landing page (site marketing, vitrine, SEO)
 
 **Objectif :** temps de chargement minimal, SEO parfait, peu d'interactivité.
@@ -21,6 +40,7 @@
 | Catégorie | Défaut | Alternative | Trigger |
 |---|---|---|---|
 | Framework | **Astro** | Next.js | Formulaires complexes, auth nécessaire |
+| Scaffold | `npm create astro@latest` | `npx create-next-app@latest` | — |
 | Styling | **Tailwind CSS v4** | — | — |
 | Composants | **shadcn/ui** | Radix UI pur | Très peu de composants custom |
 | Animations | **Framer Motion** | CSS transitions | Animations simples |
@@ -38,34 +58,85 @@ Repo existant : `landing-page/` — Next.js 16 + React 19 + Tailwind v4 + shadcn
 
 **Objectif :** UX riche, état complexe, données temps réel, auth.
 
-| Catégorie | Défaut | Alternative | Trigger |
+### Choix du framework
+
+Toutes ces options sont valides. **Par défaut : Next.js** (écosystème, RSC, déploiement Vercel, le plus de support interne). Choisis selon le contexte / la préférence client.
+
+| Framework | Langage / base | Scaffold (toujours `@latest`) | Doc officielle | Quand le choisir |
+|---|---|---|---|---|
+| **Next.js** (défaut) | React | `npx create-next-app@latest` | https://nextjs.org/docs | SSR + SEO + API routes, défaut TechGuys |
+| **Nuxt** | Vue | `npm create nuxt@latest` | https://nuxt.com/docs | Équipe/client Vue, SSR |
+| **Angular** | TypeScript | `npx @angular/cli@latest new` | https://angular.dev | Grosse app entreprise, client déjà Angular |
+| **SvelteKit** | Svelte | `npx sv create` | https://svelte.dev/docs/kit | Bundle léger, DX, perf |
+| **Remix / React Router 7** | React | `npx create-react-router@latest` | https://reactrouter.com | Web standards, nested routing |
+| **React + Vite** | React | `npm create vite@latest` | https://vite.dev | SPA pure, pas de SEO |
+| **Vue + Vite** | Vue | `npm create vue@latest` | https://vuejs.org | SPA Vue sans SSR |
+
+> Avant de scaffolder : vérifie la commande exacte sur la doc officielle (elles évoluent — ex. SvelteKit est passé à `sv`).
+
+### Briques transverses (selon le framework choisi)
+
+| Catégorie | React (Next/Remix/Vite) | Vue (Nuxt/Vite) | Angular |
 |---|---|---|---|
-| Framework | **Next.js 15** App Router | React + Vite | SPA pure, pas de SEO |
-| State client | **Zustand** | Context API | État très simple |
-| State serveur | **TanStack Query** | SWR | Mutations complexes |
-| Forms | **React Hook Form + Zod** | Formik | — |
-| Auth | **Clerk** | Supabase Auth | Déjà sur Supabase |
-| Tables | **TanStack Table** | — | — |
-| Dates | **date-fns** | dayjs | — |
-| Composants | **shadcn/ui** | — | — |
-| Deploy | **Vercel** | — | — |
+| State client | **Zustand** | **Pinia** | Services + Signals |
+| State serveur | **TanStack Query** | **TanStack Query (Vue)** / `useFetch` Nuxt | TanStack Query (Angular) / RxJS |
+| Forms | **React Hook Form + Zod** | **VeeValidate + Zod** | Reactive Forms |
+| Composants UI | **shadcn/ui** | **shadcn-vue** / PrimeVue | **Angular Material** / PrimeNG |
+| Styling | **Tailwind CSS v4** | Tailwind CSS v4 | Tailwind CSS v4 |
+| Auth | **Clerk** | Clerk / Supabase Auth | Auth0 / Supabase Auth |
+| Tables | TanStack Table | TanStack Table | Angular Material Table |
+| Dates | date-fns | date-fns | date-fns |
+| Deploy | **Vercel** | Vercel / Netlify | Vercel / Azure Static Web Apps |
 
 ---
 
 ## Backend API
 
-**Objectif :** endpoints typés, validation stricte, edge-ready.
+**Objectif :** endpoints typés, validation stricte, observable, sécurisé.
 
-| Catégorie | Défaut | Alternative | Trigger |
-|---|---|---|---|
-| Framework | **Hono** | Fastify | Plugins Node.js spécifiques (multer, etc.) |
-| Runtime | **Cloudflare Workers** | Node.js (Railway) | Deps incompatibles edge |
-| Validation | **Zod** | — | Obligatoire partout |
-| Auth middleware | **Clerk SDK** | Supabase JWT | Auth déjà configuré |
-| Rate limiting | **Arcjet** | Upstash Ratelimit | Redis déjà en place |
-| Email | **Resend** | SendGrid | Volume très élevé |
-| Queue | **Inngest** | BullMQ | Serveur Node.js persistant |
-| Deploy | **Cloudflare Workers** | Railway | Conteneur, longue durée de vie |
+### Choix du langage + framework
+
+**Par défaut : Node.js + Hono** (edge-ready, typé, déploiement Cloudflare). Mais le choix dépend de l'écosystème du projet, des compétences client et des contraintes (ML → Python, entreprise → Java/.NET).
+
+| Langage | Framework | Scaffold / setup (dernière version) | Doc officielle | Quand le choisir |
+|---|---|---|---|---|
+| **Node.js** (défaut) | **Hono** | `npm create hono@latest` | https://hono.dev | Edge, API typée, léger |
+| Node.js | Fastify | `npm create fastify@latest` | https://fastify.dev | Serveur Node classique, plugins |
+| Node.js | NestJS | `npx @nestjs/cli@latest new` | https://nestjs.com | Grosse app structurée (DI, modules) |
+| **Python** | **FastAPI** | `uv init` + `uv add fastapi[standard]` | https://fastapi.tiangolo.com | ML/IA, data, API async typée |
+| Python | Django | `uv add django` + `django-admin startproject` | https://docs.djangoproject.com | App full-featured, admin, ORM intégré |
+| **Java** | **Spring Boot** | `spring init` (CLI) ou https://start.spring.io | https://spring.io/projects/spring-boot | Entreprise, JVM, robustesse |
+| **.NET** | **ASP.NET Core** | `dotnet new webapi` | https://learn.microsoft.com/aspnet/core | Écosystème Microsoft, perf, C# |
+| **Go** | Chi / Echo / Gin | `go mod init` + `go get` (voir doc) | https://go.dev / https://echo.labstack.com | Perf, binaire unique, concurrence |
+
+> **Prérequis runtime** : Python (`uv` ou `python 3.12+`), Java (JDK 21+), .NET (SDK 8+), Go (1.22+).
+> Si le runtime n'est pas installé, le wizard affiche le lien d'installation officiel — installe la **dernière LTS / stable**.
+
+### Briques transverses (équivalents par écosystème)
+
+| Catégorie | Node | Python | Java (Spring) | .NET |
+|---|---|---|---|---|
+| Validation | **Zod** | **Pydantic** | Bean Validation (Jakarta) | DataAnnotations / FluentValidation |
+| ORM | **Drizzle** | **SQLModel** / SQLAlchemy | Spring Data JPA / Hibernate | EF Core |
+| Auth | Clerk SDK / Supabase JWT | python-jose / Clerk | Spring Security | ASP.NET Identity |
+| Tests | Vitest | pytest | JUnit 5 | xUnit |
+| Rate limit | Arcjet / Upstash | slowapi | Bucket4j / Resilience4j | AspNetCoreRateLimit |
+| Logs | Axiom / pino | structlog / loguru | Logback + SLF4J | Serilog |
+| Email | Resend | Resend / fastapi-mail | Spring Mail | MailKit |
+| Queue | Inngest / BullMQ | Celery / arq | Spring + RabbitMQ | Hangfire |
+
+> Validation reste **obligatoire sur toutes les entrées**, quel que soit le langage (Zod / Pydantic / Bean Validation / DataAnnotations).
+
+### Runtime / déploiement backend
+
+| Stack | Déploiement par défaut |
+|---|---|
+| Node + Hono (edge) | Cloudflare Workers |
+| Node + Fastify/NestJS | Railway / Render (container) |
+| Python (FastAPI/Django) | Railway / Render / Fly.io |
+| Java Spring Boot | Railway / Azure / AWS (JAR ou container) |
+| .NET | Azure App Service / Railway (container) |
+| Go | Fly.io / Railway / Cloud Run |
 
 ---
 

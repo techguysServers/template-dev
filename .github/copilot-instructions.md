@@ -4,21 +4,34 @@ Model target: claude-sonnet-4-6 (or equivalent). Execute, don't over-engineer.
 
 ---
 
+## Rule #0 — always latest version + official docs
+
+Never trust your memory for a version, scaffold/install command, or setup step.
+- Use official `@latest` commands (`npm create x@latest`, `dotnet new`, `spring init`…) — they pull the newest version.
+- If unsure of the command or version → read the official docs first (links in `STACK.md`).
+- Version numbers in this repo are indicative (2026-06-15), not fixed targets.
+
+---
+
 ## Stack by domain
 
+These are the **defaults**. All frameworks listed in `STACK.md` are valid — pick by project/client context.
+
 ### Landing page
-Next.js 16 · React 19 · TypeScript strict · Tailwind CSS v4 · shadcn/ui · Prettier · ESLint
+Astro or Next.js · Tailwind v4 · shadcn/ui
 
 ### Frontend app
-Next.js 15 App Router · Zustand · TanStack Query · Clerk · shadcn/ui · Tailwind v4
+Default **Next.js** (React). Also: Nuxt (Vue) · Angular · SvelteKit · Remix · Vite SPA.
+Briques: Zustand/Pinia · TanStack Query · RHF+Zod · shadcn · Clerk.
 
 ### Backend API
-Hono · Zod · Arcjet · Drizzle ORM · Cloudflare Workers (or Node.js/Railway)
+Default **Node.js + Hono**. Also by language: Node (Fastify/NestJS) · Python (FastAPI/Django) · Java (Spring Boot) · .NET (ASP.NET Core) · Go (Chi/Echo).
+Validation mandatory everywhere: Zod / Pydantic / Bean Validation / DataAnnotations.
 
 ### Database
-Supabase (Postgres) · Drizzle ORM · Upstash Redis
+Supabase (Postgres) · Drizzle ORM (Node) / SQLModel (Python) / JPA (Java) / EF Core (.NET) · Upstash Redis
 
-Full decision tree → `STACK.md`
+Full decision tree + official doc links → `STACK.md`
 
 ---
 

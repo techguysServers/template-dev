@@ -48,16 +48,20 @@ template-dev/
 
 ## Stack par domaine
 
-| Domaine | Stack par défaut |
-|---|---|
-| **Landing page** | Astro ou Next.js · Tailwind v4 · shadcn/ui |
-| **Frontend app** | Next.js 15 App Router · Zustand · TanStack Query · Clerk |
-| **Backend API** | Hono (edge) · Zod · Arcjet · Cloudflare Workers |
-| **Base de données** | Supabase (Postgres) · Drizzle ORM |
-| **Auth** | Clerk (défaut) · Supabase Auth |
-| **Deploy** | Vercel · Cloudflare Workers · Railway |
-| **Observabilité** | Sentry · Axiom · PostHog |
-| **Tests** | Vitest · React Testing Library · Playwright |
+Le wizard et `STACK.md` couvrent **toutes** ces options. Le tableau ci-dessous = les **défauts** ; chaque ligne a des alternatives valides (frameworks, langages) détaillées dans `STACK.md`.
+
+| Domaine | Défaut | Alternatives couvertes |
+|---|---|---|
+| **Landing page** | Astro | Next.js |
+| **Frontend app** | Next.js (React) | Nuxt · Angular · SvelteKit · Remix · React/Vue Vite |
+| **Backend API** | Node.js + Hono | Fastify · NestJS · Python (FastAPI/Django) · Java (Spring Boot) · .NET · Go |
+| **Base de données** | Supabase (Postgres) + Drizzle | Neon · Prisma · SQLModel · JPA · EF Core |
+| **Auth** | Clerk | Supabase Auth · NextAuth · Auth0 |
+| **Deploy** | Vercel | Cloudflare Workers · Railway · Render · Fly.io · Azure |
+| **Observabilité** | Sentry · Axiom · PostHog | — |
+| **Tests** | Vitest · RTL · Playwright | pytest · JUnit · xUnit |
+
+> ⚠️ **Toujours la dernière version.** Le wizard utilise les commandes officielles `@latest`. En cas de doute sur une commande/version, consulte la doc officielle (liens dans `STACK.md`).
 
 Détail complet et arbre de décision → [STACK.md](./STACK.md)
 

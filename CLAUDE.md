@@ -12,7 +12,20 @@ Tu implémente proprement, sans sur-ingénierie. Rien de plus que ce qui est dem
 
 ---
 
+## ⚠️ Règle n°0 — dernière version + doc officielle
+
+**Ne te fie jamais à ta mémoire pour une version, une commande de scaffold/install, ou une étape de setup.**
+
+- Utilise toujours les commandes officielles `@latest` (`npm create x@latest`, `npx create-x@latest`, `dotnet new`, `spring init`…) → elles tirent la dernière version.
+- Si tu n'es pas **certain** de la commande ou de la version → **lis la doc officielle avant d'agir** (liens dans `STACK.md`).
+- Vérifie la dernière stable au moment du setup (`npm view <pkg> version`, releases GitHub, doc).
+- Les numéros de version dans ce fichier et dans `STACK.md` sont **indicatifs (2026-06-15)**, pas des cibles figées.
+
+---
+
 ## 1. Stack par domaine
+
+> Vue résumée. Le détail complet (frameworks par langage, liens doc, triggers) est dans **`STACK.md`** — c'est la référence. Toutes les technos listées y sont valides ; ci-dessous = les défauts TechGuys.
 
 ### Landing page (marketing, vitrine, SEO)
 
@@ -28,26 +41,36 @@ Stack existante dans `landing-page/` : Next.js 16 + React 19 + Tailwind v4 + sha
 
 ### Frontend app (SaaS, dashboard, portail)
 
-| Décision | Choix | Quand changer |
+Défaut **Next.js**, mais le framework dépend du contexte/client. Tous valides (détail + liens doc dans `STACK.md`) :
+
+| Framework | Base | Scaffold (`@latest`) |
 |---|---|---|
-| Framework | **Next.js 15** App Router | React/Vite si SPA pure sans SEO |
-| State client | **Zustand** | Context si état simple |
-| State serveur | **TanStack Query** | Server Components si Next.js full |
-| Forms | **React Hook Form + Zod** | — |
-| Auth | **Clerk** | Supabase Auth si déjà sur Supabase |
-| Composants | **shadcn/ui** | — |
-| Deploy | **Vercel** | — |
+| **Next.js** (défaut) | React | `npx create-next-app@latest` |
+| Nuxt | Vue | `npm create nuxt@latest` |
+| Angular | TS | `npx @angular/cli@latest new` |
+| SvelteKit | Svelte | `npx sv create` |
+| Remix / RR7 | React | `npx create-react-router@latest` |
+| React/Vite, Vue/Vite | SPA | `npm create vite@latest` / `npm create vue@latest` |
+
+Briques (selon framework) : state (**Zustand**/Pinia/Signals) · data (**TanStack Query**) · forms (**RHF+Zod**/VeeValidate) · UI (**shadcn**/shadcn-vue/Angular Material) · auth (**Clerk**) · deploy (**Vercel**).
 
 ### Backend API
 
-| Décision | Choix | Quand changer |
+Défaut **Node.js + Hono**, mais le langage dépend du projet (ML → Python, entreprise → Java/.NET). Tous valides (détail dans `STACK.md`) :
+
+| Langage | Framework (défaut) | Scaffold / setup |
 |---|---|---|
-| Framework | **Hono** (edge-ready) | Fastify si plugins Node spécifiques |
-| Runtime | **Cloudflare Workers** | Node.js (Railway) si deps Node |
-| Validation | **Zod** — obligatoire sur toutes les entrées | — |
-| Auth middleware | **Clerk SDK** ou **Supabase JWT** | — |
-| Rate limiting | **Arcjet** | Upstash si Redis déjà en place |
-| Deploy | **Cloudflare Workers** ou **Railway** | — |
+| **Node.js** (défaut) | **Hono** | `npm create hono@latest` |
+| Node.js | Fastify · NestJS | `npm create fastify@latest` · `npx @nestjs/cli@latest new` |
+| Python | FastAPI · Django | `uv add "fastapi[standard]"` · `uv add django` |
+| Java | Spring Boot | `spring init` / start.spring.io |
+| .NET | ASP.NET Core | `dotnet new webapi` |
+| Go | Chi / Echo | `go mod init` + `go get` |
+
+Règles transverses, quel que soit le langage :
+- **Validation obligatoire sur toutes les entrées** : Zod (Node) · Pydantic (Python) · Bean Validation (Java) · DataAnnotations (.NET)
+- Auth vérifiée côté serveur · rate limiting sur routes publiques · logs structurés avec `requestId`
+- Runtime non installé (Python/JDK/.NET/Go) → installer la **dernière LTS/stable** depuis la doc officielle
 
 ### Base de données
 
